@@ -116,13 +116,6 @@ Connection points are in `olc/connectors.py` and `config/approved_sources.json`:
 Because calls use each reviewer's own token, the provider only returns files that person can already open. The agent
 refuses any folder not on the approved list and never crawls a whole tenant.
 
-## Optional Claude review layer
-
-`pip install anthropic` and set `ANTHROPIC_API_KEY`. Claude then gives a second opinion on each candidate mapping. It can
-only **drop** a mapping or **lower** a level, never raise one, and it only sees passages that exist in the source.
-Submission narratives drafted by Claude are discarded unless every citation is an APPROVED evidence item. Model:
-`claude-opus-5` (override with `OLC_CLAUDE_MODEL`). Set `OLC_DISABLE_LLM=1` to turn it off.
-
 ## Tests
 
 ```bash
