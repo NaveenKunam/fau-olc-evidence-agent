@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf_field with context %}
+{% block body %}
+<h1>Preview: {{ 'QSS indicator wording' if kind=='qss' else 'Handbook interpretation' }} from {{ name }}</h1>
+<p class="muted">Found {{ n_found }} of 70 indicators. Review before applying. {% if kind=='qss' %}Previous wording is kept as alternate text when it differs.{% endif %}</p>
+<form method="post" action="/admin/rubric">{{ csrf_field() }}<input type="hidden" name="apply" value="1"><input type="hidden" name="kind" value="{{ kind }}">
+<div class="card"><table><tr>{% if kind=='qss' %}<th>Apply</th>{% endif %}<th>ID</th><th>Page</th><th>Parsed text</th><th>Current text</th></tr>
+{% for r in rows %}<tr>{% if kind=='qss' %}<td><input type="checkbox" name="ids" value="{{ r.id }}" checked></td>{% endif %}<td class="mono">{{ r.id }}</td><td>{{ r.page }}</td>
+<td class="small" style="max-width:480px">{{ r.new[:600] }}</td><td class="small muted" style="max-width:380px">{{ r.old or '(pending)' }}{% if r.changed %} <span class="badge b-partial">changed</span>{% endif %}</td></tr>{% endfor %}</table></div>
+<button>Apply</button> <a class="btn ghost" href="/admin">Cancel</a></form>{% endblock %}

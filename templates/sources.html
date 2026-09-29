@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% from "_macros.html" import badge with context %}
+{% block title %}Sources · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between"><h1>Sources</h1>{% if can('contributor') %}<a class="btn" href="/sources/add">+ Add document or URL</a>{% endif %}</div>
+<div class="card"><div class="tablewrap"><table>
+<tr><th>#</th><th>Title</th><th>Type</th><th>Authority</th><th>Date</th><th>Version</th><th>Classification</th><th>Passages</th><th>Evidence</th><th>Added</th></tr>
+{% for d in docs %}<tr>
+<td class="mono">{{ d.id }}</td>
+<td style="max-width:380px"><a href="/source/{{ d.id }}"><strong>{{ d.title }}</strong></a><div class="small muted">{{ (d.source_url or d.filename or '')[:100] }}</div></td>
+<td class="small">{{ d.doc_type }}<br><span class="muted">{{ d.kind }}</span></td><td class="small">{{ d.authority }}</td><td class="small">{{ d.doc_date or 'undated' }}</td>
+<td>{% if d.is_draft %}{{ badge('PROPOSED/DRAFT') }}{% elif d.superseded_by %}{{ badge('SUPERSEDED/STALE') }}{% else %}<span class="small muted">current</span>{% endif %}</td>
+<td>{{ badge(d.classification) }}</td><td class="small">{{ d.n_pass }}</td><td class="small"><a href="/evidence?doc={{ d.id }}">{{ d.n_ev }}</a></td><td class="small muted">{{ d.added_by }}<br>{{ d.added_at }}</td></tr>{% endfor %}
+</table></div></div>
+<div class="card"><h2 style="margin-top:0">Approved cloud locations (read-only)</h2>
+<p class="small muted">Google Drive and Microsoft SharePoint/OneDrive connectors use each reviewer's own delegated, read-only access and only folders an administrator has approved. They are not active in this build; uploads and URLs work now. See README › Enabling Google Drive / SharePoint.</p>
+<table class="md">{% for c in conns %}<tr><td><strong>{{ c.name }}</strong></td><td class="small">{{ c.status() }}</td><td class="small">{% for l in c.approved() %}{{ l.label }}{% if not loop.last %}; {% endif %}{% endfor %}</td></tr>{% endfor %}</table></div>
+{% endblock %}

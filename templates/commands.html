@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf_field with context %}
+{% block title %}Commands · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<h1>Team commands</h1>
+<div class="card"><form method="post" class="row">{{ csrf_field() }}<input class="console" type="text" name="cmd" value="{{ cmd }}" placeholder="e.g. INDICATOR IS-1 · OWNER PACKET OIT · VERIFY · SUBMISSION DRAFT INS-01" style="flex:1;min-width:260px" autofocus><button>Run</button></form>
+<div class="cmdchips" style="margin-top:8px">{% for c in ['SHOW GAPS','INDICATOR IS-1','OWNER PACKET OIT','OWNER PACKET PROVOST','OWNERS','MEETING BRIEF','WHAT CHANGED','VERIFY','VERIFY INS-04','SUBMISSION DRAFT INS-01','SEARCH FAU TEC-01','CHECKPOINT Team meeting','HELP'] %}<a href="/commands?cmd={{ c|urlencode }}">{{ c }}</a>{% endfor %}</div>
+<div class="small muted">PROCESS SOURCE &lt;url&gt; fetches and analyzes a URL. To process a file, use <a href="/sources/add">Add Source</a>. Commands that change data (PROCESS SOURCE, REPROCESS, CHECKPOINT, SEARCH) run when you press Run.</div></div>
+{% if out %}<div class="card report">{% if link %}<p><a class="btn ghost sm" href="{{ link }}">Open ›</a></p>{% endif %}{{ out|md }}
+{% if results is not none %}
+<table class="md"><tr><th>Candidate page</th><th>Score</th><th>Snippet</th><th></th></tr>
+{% for r in results %}<tr><td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a><div class="small muted">{{ r.url }}</div></td><td>{{ r.score }}</td><td class="small">{{ r.snippet }}</td>
+<td>{% if r.already_ingested %}<span class="small muted">already ingested</span>{% elif can('contributor') %}<form method="post" action="/sources/add">{{ csrf_field() }}<input type="hidden" name="mode" value="url"><input type="hidden" name="url" value="{{ r.url }}"><input type="hidden" name="classification" value="PUBLIC"><button class="sm">Process</button></form>{% endif %}</td></tr>{% else %}<tr><td colspan="4" class="muted">No relevant candidates on approved pages.</td></tr>{% endfor %}</table>{% endif %}
+</div>{% endif %}
+{% endblock %}

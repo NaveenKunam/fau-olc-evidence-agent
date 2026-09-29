@@ -1,0 +1,38 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf_field with context %}
+{% block title %}Add source · FAU OLC Evidence Agent{% endblock %}
+{% macro common(default_cls='INTERNAL') %}
+<div class="row" style="margin-top:8px">
+  <label class="small">Classification<br><select name="classification">{% for c in ['PUBLIC','INTERNAL','RESTRICTED'] %}<option {{ 'selected' if c==default_cls }}>{{ c }}</option>{% endfor %}</select></label>
+  <label class="small">Authority<br><select name="authority"><option value="">Auto-detect</option><option>FAU</option><option>STATE</option><option>ACCREDITOR</option><option>OTHER</option></select></label>
+  <label class="small">Document type<br><select name="doc_type"><option value="">Auto-detect</option>{% for t in ['PLAN','POLICY','REPORT','DATA','MINUTES','STANDARD','WEBPAGE','OTHER'] %}<option>{{ t }}</option>{% endfor %}</select></label>
+  <label class="small">Document date<br><input type="text" name="doc_date" placeholder="auto"></label>
+  <label class="small">Title<br><input type="text" name="title" placeholder="auto"></label>
+</div>
+{% endmacro %}
+{% block body %}
+<h1>Add a source (PROCESS SOURCE)</h1>
+<p class="muted">The agent extracts every passage (with page/section), compares each against all indicators, classifies what level it can prove, and records gaps. Human decisions are never overwritten. Identical files are detected as duplicates; a new file at the same URL becomes a new version.</p>
+<div class="two"><div>
+<div class="card"><h2 style="margin-top:0">Upload files</h2>
+<form method="post" enctype="multipart/form-data">{{ csrf_field() }}<input type="hidden" name="mode" value="file">
+<input type="file" name="files" multiple accept=".pdf,.docx,.xlsx,.xlsm,.csv,.txt,.md,.htm,.html" required>
+<div class="small muted">PDF, DOCX, XLSX, CSV, TXT/MD, HTML · up to 40 MB</div>
+{{ common('INTERNAL') }}<p><button>Upload and analyze</button></p></form></div>
+<div class="card"><h2 style="margin-top:0">Fetch a URL</h2>
+<form method="post">{{ csrf_field() }}<input type="hidden" name="mode" value="url">
+<input type="url" name="url" required placeholder="https://www.fau.edu/..." style="width:100%">
+{{ common('PUBLIC') }}<p><button>Fetch and analyze</button></p></form>
+<p class="small muted">Approved domains: {{ allowed|join(', ') }}</p></div>
+<div class="card"><h2 style="margin-top:0">Paste text</h2>
+<form method="post">{{ csrf_field() }}<input type="hidden" name="mode" value="text">
+<textarea name="text" rows="8" required placeholder="Paste text from an email, minutes, or a report. Give it a title below."></textarea>
+{{ common('INTERNAL') }}<p><button>Analyze text</button></p></form></div>
+</div><div>
+<div class="card"><h3 style="margin-top:0">What happens</h3><ol class="small" style="padding-left:18px">
+<li>Identify the document; detect type, date, draft/proposed status, authority.</li>
+<li>Extract every passage with page and section.</li><li>Score passages against every indicator's concepts.</li>
+<li>Classify the level each passage can prove (intent → improvement), capped by document type.</li>
+<li>Create evidence records (status, strength, missing evidence, next artifact, owner).</li>
+<li>Skip duplicates; leave human-reviewed records untouched.</li><li>Recalculate gaps and preliminary assessments.</li></ol>
+<div class="note small">Document type matters: reports, data, minutes and completion records can prove implementation and measurement. Plans prove intent. Policies, standards and webpages prove a stated process.</div></div>
+</div></div>{% endblock %}

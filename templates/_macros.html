@@ -1,0 +1,4 @@
+{% macro badge(v, cls=None) -%}<span class="badge b-{{ (cls or v or 'none')|slug }}">{{ v or '—' }}</span>{%- endmacro %}
+{% macro lvl(v) -%}{% if v %}<span class="badge b-lvl" title="{{ LEVEL_HELP.get(v, '') }}">{{ v }}</span>{% else %}<span class="muted">—</span>{% endif %}{%- endmacro %}
+{% macro pill(n, off=False) -%}{% if n is none %}<span class="muted">—</span>{% else %}<span class="pill {{ 'off' if off else 'p' ~ n }}">{{ n }}</span>{% endif %}{%- endmacro %}
+{% macro csrf_field() -%}<input type="hidden" name="csrf" value="{{ csrf }}">{%- endmacro %}

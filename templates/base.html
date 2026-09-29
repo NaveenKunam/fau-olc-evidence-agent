@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}FAU OLC Evidence Agent{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head><body>
+{% if user %}
+<header class="top">
+  <a class="brand" href="/">FAU OLC <span>Evidence Agent</span></a>
+  {% set p = request.path %}
+  <nav>
+    <a href="/" class="{{ 'on' if p == '/' }}">Dashboard</a>
+    <a href="/reports/initial" class="{{ 'on' if p.startswith('/reports/initial') }}">Initial Review</a>
+    <a href="/evidence" class="{{ 'on' if p.startswith('/evidence') }}">Evidence</a>
+    <a href="/reports/gaps" class="{{ 'on' if p.startswith('/reports/gaps') }}">Gaps</a>
+    <a href="/owners" class="{{ 'on' if p.startswith('/owners') }}">Owner Packets</a>
+    <a href="/sources" class="{{ 'on' if p.startswith('/source') }}">Sources</a>
+    <a href="/commands" class="{{ 'on' if p.startswith('/commands') }}">Commands</a>
+    <a href="/reports/meeting" class="{{ 'on' if p.startswith('/reports/meeting') }}">Meeting Brief</a>
+    {% if can('admin') %}<a href="/admin" class="{{ 'on' if p.startswith('/admin') }}">Admin</a>{% endif %}
+  </nav>
+  <div class="who">{{ user.display_name }} · {{ user.role }} · <span title="Clearance">{{ user.clearance }}</span> · <a href="/account">account</a> · <a href="/logout">sign out</a></div>
+</header>
+{% endif %}
+<main>
+{% with msgs = get_flashed_messages(with_categories=true) %}{% for c, m in msgs %}<div class="flash {{ c }}">{{ m }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main>
+<footer>FAU OLC Evidence Agent · AI assessments are preliminary and advisory. Official OLC scores are entered only by human reviewers. · No evidence = no claim.
+{% if llm_on %}· Claude review layer: on{% else %}· Rule engine (Claude layer off){% endif %}</footer>
+</body></html>

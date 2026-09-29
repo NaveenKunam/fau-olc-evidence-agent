@@ -1,0 +1,5 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf_field with context %}{% block body %}
+<h1>Your account</h1><div class="card" style="max-width:460px"><form method="post">{{ csrf_field() }}
+<p><label>Current password<br><input type="password" name="current" required style="width:100%"></label></p>
+<p><label>New password (10+ characters)<br><input type="password" name="new" required style="width:100%"></label></p>
+<button>Change password</button></form></div>{% endblock %}

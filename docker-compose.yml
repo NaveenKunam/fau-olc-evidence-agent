@@ -1,0 +1,12 @@
+services:
+  olc-agent:
+    build: .
+    ports:
+      - "5210:5210"
+    environment:
+      - OLC_SECURE_COOKIES=1
+    volumes:
+      - olc-data:/data
+    restart: unless-stopped
+volumes:
+  olc-data:

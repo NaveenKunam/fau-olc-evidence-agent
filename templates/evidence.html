@@ -1,0 +1,28 @@
+{% extends "base.html" %}{% from "_macros.html" import badge, lvl, csrf_field with context %}
+{% block title %}Evidence repository · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between"><h1>Evidence repository</h1><a class="btn ghost sm" href="/export.xlsx">Export .xlsx</a></div>
+<p class="muted small">{{ ev|length }} of {{ total }} evidence records visible at your clearance. Every record keeps its source, page/section and verbatim passage.</p>
+<div class="card">
+<form class="filters" method="get">
+  <input type="text" name="indicator" value="{{ f.indicator }}" placeholder="Indicator (e.g. INS-04)" style="min-width:120px">
+  <select name="status"><option value="">Any evidence status</option>{% for v in ['FOUND','PARTIAL','NEEDS VERIFICATION','PROPOSED/DRAFT','SUPERSEDED/STALE','APPROVED','REJECTED'] %}<option {{ 'selected' if f.status==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="strength"><option value="">Any strength</option>{% for v in ['STRONG','MODERATE','WEAK'] %}<option {{ 'selected' if f.strength==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="level"><option value="">Any level</option>{% for v in LEVELS %}<option {{ 'selected' if f.level==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="review"><option value="">Any review</option>{% for v in ['NOT REVIEWED','APPROVED','REJECTED'] %}<option {{ 'selected' if f.review==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="origin"><option value="">Any origin</option><option value="ai" {{ 'selected' if f.origin=='ai' }}>AI-mapped passage</option><option value="matrix" {{ 'selected' if f.origin=='matrix' }}>Prior matrix claim</option><option value="human" {{ 'selected' if f.origin=='human' }}>Human-entered</option></select>
+  <input type="text" name="q" value="{{ f.q }}" placeholder="Search passage text">
+  <button>Filter</button> <a class="small" href="/evidence">clear</a>
+</form>
+<div class="tablewrap"><table>
+<tr><th>ID</th><th>Indicator</th><th>Source · location</th><th>Passage / claim</th><th>Status</th><th>Strength</th><th>Level</th><th>Stage</th>{% if can('reviewer') %}<th></th>{% endif %}</tr>
+{% for e in ev %}<tr>
+<td class="mono"><a href="/indicator/{{ e.indicator_id }}#{{ e.evidence_code }}">{{ e.evidence_code }}</a></td>
+<td class="mono"><a href="/indicator/{{ e.indicator_id }}">{{ e.indicator_id }}</a></td>
+<td class="small" style="max-width:220px">{% if e.document_id %}<a href="/source/{{ e.document_id }}">{{ e.title[:70] }}</a>{% else %}{{ e.title }}{% endif %}<div class="muted">{{ e.doc_date or 'undated' }}{% if e.page %} · {{ e.page }}{% endif %}{% if e.section %} · {{ e.section[:40] }}{% endif %}</div>{{ badge(e.classification) }}</td>
+<td class="small" style="max-width:460px">{{ (e.passage or e.summary or '')[:320] }}{% if (e.passage or e.summary or '')|length > 320 %}…{% endif %}</td>
+<td>{{ badge(display_status(e)) }}</td><td>{{ badge(e.strength) }}</td><td>{{ lvl(e.implementation_level) }}</td><td class="small">{{ badge(e.workflow_stage) }}</td>
+{% if can('reviewer') %}<td style="white-space:nowrap"><form method="post" action="/evidence/{{ e.id }}" class="inline">{{ csrf_field() }}<input type="hidden" name="back" value="{{ request.full_path }}">
+ {% if e.review_status!='APPROVED' %}<button class="ok sm" name="act" value="approve" title="Approve">✓</button>{% endif %}{% if e.review_status!='REJECTED' %}<button class="bad sm" name="act" value="reject" title="Reject">✗</button>{% endif %}</form></td>{% endif %}
+</tr>{% else %}<tr><td colspan="9" class="muted">No evidence matches.</td></tr>{% endfor %}
+</table></div></div>{% endblock %}

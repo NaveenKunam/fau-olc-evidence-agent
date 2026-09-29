@@ -1,0 +1,49 @@
+{
+  "_comment": "Administrators: list ONLY approved evidence locations. The agent never crawls outside these.",
+  "allowed_web_domains": ["fau.edu", "flvc.org", "floridashines.org", "flbog.edu", "sacscoc.org", "sreb.org", "qualitymatters.org", "onlinelearningconsortium.org"],
+  "fau_seed_pages": [
+    "https://www.fau.edu/online/",
+    "https://www.fau.edu/elearning/",
+    "https://www.fau.edu/elearning/faculty/",
+    "https://www.fau.edu/elearning/faculty-online-quality-commitment/",
+    "https://www.fau.edu/online/getting-started/frequently-asked-questions/index.php",
+    "https://www.fau.edu/studentresources/",
+    "https://www.fau.edu/provost/",
+    "https://www.fau.edu/oit/"
+  ],
+  "initial_urls": [
+    "https://www.fau.edu/elearning/faculty-online-quality-commitment/",
+    "https://dlss.flvc.org/florida-online-course-design-quality-designations",
+    "https://www.fau.edu/online/getting-started/frequently-asked-questions/index.php",
+    "https://www.fau.edu/studentresources/",
+    "https://www.fau.edu/elearning/faculty/",
+    "https://www.fau.edu/elearning/faculty/services/instructional-design-services/quality-matters-at-fau/",
+    "https://www.fau.edu/elearning/faculty/services/instructional-design-services/build-an-online-degree/"
+  ],
+  "google_drive": {
+    "enabled": false,
+    "client_id": "",
+    "client_secret_env": "GOOGLE_CLIENT_SECRET",
+    "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+    "approved_folders": [
+      {"folder_id": "", "label": "OLC Evidence - shared team folder", "default_classification": "INTERNAL"}
+    ]
+  },
+  "microsoft": {
+    "enabled": false,
+    "tenant_id": "",
+    "client_id": "",
+    "client_secret_env": "MS_CLIENT_SECRET",
+    "scopes": ["Files.Read", "Sites.Read.All", "offline_access"],
+    "approved_locations": [
+      {"type": "sharepoint", "label": "COCE SharePoint - OLC Evidence library", "site_id": "", "drive_id": "", "folder_path": "OLC Evidence", "default_classification": "INTERNAL"},
+      {"type": "onedrive", "label": "Reviewer OneDrive - OLC folder", "folder_path": "OLC Evidence", "default_classification": "INTERNAL"}
+    ]
+  },
+  "search_api": {
+    "_comment": "Optional. Without it, SEARCH uses a bounded crawl of fau_seed_pages. Google Programmable Search: set provider=google_cse, cx, and key env var.",
+    "provider": null,
+    "cx": "",
+    "api_key_env": "GOOGLE_CSE_KEY"
+  }
+}

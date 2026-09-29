@@ -1,0 +1,158 @@
+{% extends "base.html" %}{% from "_macros.html" import badge, lvl, pill, csrf_field with context %}
+{% set i = x.indicator %}
+{% block title %}{{ i.id }} · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between">
+  <div class="small muted"><a href="/">Dashboard</a> › {{ i.category }} › {{ i.id }}</div>
+  <div class="row small">{% if nav[0] %}<a href="/indicator/{{ nav[0] }}">‹ {{ nav[0] }}</a>{% endif %}
+    <form method="get" onsubmit="location='/indicator/'+this.j.value;return false"><select name="j" onchange="this.form.onsubmit()">{% for a in all_ids %}<option {{ 'selected' if a==i.id }}>{{ a }}</option>{% endfor %}</select></form>
+    {% if nav[1] %}<a href="/indicator/{{ nav[1] }}">{{ nav[1] }} ›</a>{% endif %}</div>
+</div>
+<h1>{{ i.id }} <span class="muted" style="font-weight:500">· {{ i.category }} #{{ i.number }}</span></h1>
+
+<div class="two">
+<div>
+  <div class="card">
+    <h3 style="margin-top:0">OLC requirement</h3>
+    {% if i.text %}<blockquote style="margin:0;font-size:15px;border-left:3px solid var(--red);padding:4px 12px">{{ i.text }}</blockquote>
+    {% else %}<div class="note">Indicator wording has not been loaded. The QSS PDF was not supplied with the initial build; import it in Admin › OLC Rubric or enter the wording below.{% if i.config.hint %}<br><br><em>{{ i.config.hint }}</em>{% endif %}</div>{% endif %}
+    <div class="small muted" style="margin-top:6px">Wording source: {{ i.text_source }}</div>
+    {% if i.alt_text %}<div class="note" style="margin-top:8px"><strong>Wording conflict in FAU matrix:</strong> alternate wording "{{ i.alt_text }}". Confirm against the QSS PDF.</div>{% endif %}
+    <h3>OLC Handbook interpretation</h3>
+    {% if i.handbook_text %}<div class="passage">{{ i.handbook_text }}</div><div class="small muted">{{ i.handbook_source }}</div>
+    {% else %}<p class="muted small">Handbook not yet imported (Admin › OLC Rubric › Handbook PDF).</p>{% endif %}
+    <h3>Rubric</h3>
+    <table class="md">{% for n, name, d in RUBRIC %}<tr><td style="width:40px">{{ pill(n) }}</td><td style="width:110px"><strong>{{ name }}</strong></td><td>{{ d }}</td></tr>{% endfor %}</table>
+    <h3>Evidence expectation <span class="small muted">(FAU team guidance, not OLC text)</span></h3>
+    <p style="margin:4px 0">To substantiate this indicator, evidence must reach {{ lvl(i.required_level) }} — {{ LEVEL_HELP[i.required_level] }}</p>
+  </div>
+
+  <div class="card" id="gap">
+    <h2 style="margin-top:0">Gap analysis</h2>
+    <dl class="kv">
+      <dt>What do we have?</dt><dd>{% if x.have %}<ul style="margin:0;padding-left:18px">{% for h in x.have %}<li class="small">{{ h }}</li>{% endfor %}</ul>{% else %}Nothing located.{% endif %}</dd>
+      <dt>What does it prove?</dt><dd>{% if x.proves %}{{ x.proves|join('; ') }}{% else %}Nothing verified yet.{% endif %}</dd>
+      <dt>What does it NOT prove?</dt><dd>{% if x.not_proves %}<ul style="margin:0;padding-left:18px">{% for n in x.not_proves %}<li>{{ n }}</li>{% endfor %}</ul>{% else %}No level gap. A reviewer must still confirm currency, adoption and scope.{% endif %}</dd>
+      <dt>What is still missing?</dt><dd><strong>{{ x.headline }}</strong></dd>
+      <dt>Artifacts to close the gap</dt><dd>{% if x.needed %}<ul style="margin:0;padding-left:18px">{% for l, t in x.needed %}<li>{{ lvl(l) }} {{ t }}</li>{% endfor %}</ul>{% else %}—{% endif %}</dd>
+      <dt>Likely owner</dt><dd>{{ x.owners|join('; ') or 'TBD' }}</dd>
+      {% if x.covered or x.uncovered %}<dt>Element coverage</dt><dd>{% for c in x.covered %}<span class="badge b-found">✓ {{ c }}</span> {% endfor %}{% for c in x.uncovered %}<span class="badge b-missing">✗ {{ c }}</span> {% endfor %}</dd>{% endif %}
+    </dl>
+  </div>
+
+  <div class="card" id="evidence">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">Evidence ({{ ev|length }})</h2>
+      <div class="row">{% if can('contributor') %}<form method="post" action="/search" class="inline">{{ csrf_field() }}<input type="hidden" name="indicator" value="{{ i.id }}"><button class="ghost sm" {{ 'disabled' if i.pending }}>Search FAU web for this indicator</button></form>{% endif %}</div></div>
+    {% if not ev %}<p class="muted">No evidence mapped. NO EVIDENCE = NO CLAIM.</p>{% endif %}
+    {% for e in ev %}
+    <div class="ev {{ 'rej' if e.review_status=='REJECTED' }}" id="{{ e.evidence_code }}">
+      <div class="meta"><strong class="mono">{{ e.evidence_code }}</strong> {{ badge(display_status(e)) }} {{ badge(e.strength) }} {{ lvl(e.implementation_level) }}
+        {{ badge(e.workflow_stage) }} {{ badge(e.classification) }}
+        {% if e.origin == 'matrix' %}<span class="badge b-needs-verification">prior matrix claim</span>{% elif e.origin == 'human' %}<span class="badge b-lvl">human-entered</span>{% elif e.origin == 'ai_llm' %}<span class="badge b-lvl">rules + Claude</span>{% endif %}</div>
+      <div><strong>{% if e.document_id %}<a href="/source/{{ e.document_id }}">{{ e.title }}</a>{% else %}{{ e.title }}{% endif %}</strong>
+        <span class="small muted">· {{ e.evidence_type }} · {{ e.source_org or '' }} · {{ e.doc_date or 'undated' }}{% if e.page %} · {{ 'p. ' ~ e.page if e.page|string|int(-1) > 0 else e.page }}{% endif %}{% if e.section %} · §{{ e.section[:60] }}{% endif %}</span></div>
+      <div class="small">{% set src = e.doc_url or e.source_ref %}{% if src and src.startswith('http') %}<a href="{{ src }}" target="_blank" rel="noopener">{{ src[:110] }}</a>{% else %}<span class="muted">{{ src or '' }}</span>{% endif %}</div>
+      {% if e.passage %}<div class="passage">{{ e.passage }}</div>{% else %}<div class="passage muted">No verbatim passage recorded. Claim: {{ e.summary }}</div>{% endif %}
+      <dl class="kv small">
+        <dt>Why it maps</dt><dd>{{ e.mapping_rationale }}</dd>
+        <dt>Level rationale</dt><dd>{{ e.level_rationale }}</dd>
+        <dt>Missing</dt><dd>{{ e.missing_note or '—' }}</dd>
+        {% if e.next_artifact %}<dt>Next artifact</dt><dd>{{ e.next_artifact }}</dd>{% endif %}
+        {% if e.corroborated_by %}<dt>Corroboration</dt><dd>{{ e.corroborated_by }}</dd>{% endif %}
+        <dt>Added</dt><dd>{{ e.added_by }} · {{ e.added_at }}</dd>
+        {% if e.reviewer %}<dt>Reviewed</dt><dd>{{ e.reviewer }} · {{ e.reviewed_at }}{% if e.reviewer_notes %} · “{{ e.reviewer_notes }}”{% endif %}</dd>{% endif %}
+      </dl>
+      {% if can('contributor') %}
+      <div class="row" style="margin-top:8px">
+        {% if can('reviewer') %}
+        <form method="post" action="/evidence/{{ e.id }}" class="inline row">{{ csrf_field() }}<input type="hidden" name="back" value="/indicator/{{ i.id }}#{{ e.evidence_code }}">
+          <input type="text" name="reviewer_notes" placeholder="Reviewer note (optional)" style="width:220px">
+          {% if e.review_status != 'APPROVED' %}<button class="ok sm" name="act" value="approve">Approve</button>{% endif %}
+          {% if e.review_status != 'REJECTED' %}<button class="bad sm" name="act" value="reject">Reject</button>{% endif %}
+          {% if e.review_status == 'APPROVED' and not e.include_in_submission %}<button class="ghost sm" name="act" value="include">Include in submission</button>{% endif %}
+          {% if e.include_in_submission %}<button class="ghost sm" name="act" value="exclude">Remove from submission</button>{% endif %}
+          {% if e.review_status != 'NOT REVIEWED' %}<button class="ghost sm" name="act" value="reset">Reset review</button>{% endif %}
+        </form>{% endif %}
+        <details><summary>Edit mapping / classification</summary>
+          <form method="post" action="/evidence/{{ e.id }}" style="margin-top:6px">{{ csrf_field() }}<input type="hidden" name="act" value="edit"><input type="hidden" name="back" value="/indicator/{{ i.id }}#{{ e.evidence_code }}">
+            <div class="row"><label class="small">Indicator <select name="indicator_id">{% for a in all_ids %}<option {{ 'selected' if a==e.indicator_id }}>{{ a }}</option>{% endfor %}</select></label>
+            <label class="small">Level <select name="implementation_level">{% for l in LEVELS %}<option {{ 'selected' if l==e.implementation_level }}>{{ l }}</option>{% endfor %}</select></label>
+            <label class="small">Strength <select name="strength">{% for v in ['STRONG','MODERATE','WEAK'] %}<option {{ 'selected' if v==e.strength }}>{{ v }}</option>{% endfor %}</select></label>
+            <label class="small">Classification <select name="classification">{% for v in ['PUBLIC','INTERNAL','RESTRICTED'] %}<option {{ 'selected' if v==e.classification }}>{{ v }}</option>{% endfor %}</select></label></div>
+            <p><textarea name="mapping_rationale" rows="2">{{ e.mapping_rationale }}</textarea></p>
+            <p><input type="text" name="reviewer_notes" value="{{ e.reviewer_notes or '' }}" placeholder="Reviewer notes" style="width:100%"></p>
+            <button class="sm">Save edits</button> <span class="small muted">Human edits are preserved; AI reprocessing never overwrites them.</span></form>
+          <form method="post" action="/evidence/{{ e.id }}" style="margin-top:6px" class="row">{{ csrf_field() }}<input type="hidden" name="act" value="also_map"><input type="hidden" name="back" value="/indicator/{{ i.id }}">
+            <label class="small">Also map this passage to <select name="indicator_id">{% for a in all_ids %}<option>{{ a }}</option>{% endfor %}</select></label>
+            <input type="text" name="reason" placeholder="Why" style="width:220px"><button class="ghost sm">Add mapping</button></form>
+        </details>
+      </div>{% endif %}
+    </div>
+    {% endfor %}
+    {% if can('contributor') %}
+    <details style="margin-top:10px"><summary><strong>+ Record evidence manually</strong> (you located a passage yourself)</summary>
+      <form method="post" action="/indicator/{{ i.id }}/evidence/new" style="margin-top:8px">{{ csrf_field() }}
+        <div class="row"><input type="text" name="title" placeholder="Evidence title" style="width:280px"><input type="text" name="source_ref" placeholder="Source URL or filename (required)" required style="width:320px"></div>
+        <div class="row" style="margin-top:6px"><input type="text" name="page" placeholder="Page" style="width:80px"><input type="text" name="section" placeholder="Section" style="width:200px"><input type="text" name="doc_date" placeholder="Document date" style="width:140px">
+          <select name="level">{% for l in LEVELS %}<option {{ 'selected' if l=='PROCESS' }}>{{ l }}</option>{% endfor %}</select>
+          <select name="classification"><option>PUBLIC</option><option selected>INTERNAL</option><option>RESTRICTED</option></select></div>
+        <p><textarea name="passage" placeholder="Exact supporting passage (verbatim, required)" required></textarea></p>
+        <p><input type="text" name="rationale" placeholder="Why this maps to the indicator" style="width:100%"></p>
+        <button class="sm">Add evidence</button> <span class="small muted">Enters as NEEDS VERIFICATION; another reviewer approves it.</span></form></details>{% endif %}
+  </div>
+
+  <div class="card" id="requests">
+    <h2 style="margin-top:0">Evidence requests</h2>
+    <table class="md"><tr><th>Request</th><th>Owner</th><th>Status</th><th>Assigned / notes</th></tr>
+    {% for r in reqs %}<tr><td>{{ r.request }}<div class="small muted">{{ r.source }}</div></td><td class="small">{{ r.owner or '' }}</td>
+      <td colspan="2">{% if can('contributor') %}<form method="post" action="/indicator/{{ i.id }}/request" class="row">{{ csrf_field() }}<input type="hidden" name="request_id" value="{{ r.id }}">
+        <select name="status">{% for v in ['Open','Requested','Received','Closed - not available'] %}<option {{ 'selected' if r.status==v }}>{{ v }}</option>{% endfor %}</select>
+        <input type="text" name="assigned_to" value="{{ r.assigned_to or '' }}" placeholder="Assigned to" style="width:120px"><input type="text" name="notes" value="{{ r.notes or '' }}" placeholder="Link / notes" style="width:160px"><button class="ghost sm">Save</button></form>{% else %}{{ r.status }}{% endif %}</td></tr>{% endfor %}
+    {% for l, t in x.needed %}<tr><td>{{ t }}<div class="small muted">Recommended by agent ({{ l }})</div></td><td class="small">{{ x.owners[:2]|join('; ') }}</td><td colspan="2" class="small muted">Included in owner packets automatically</td></tr>{% endfor %}
+    </table>
+    {% if can('contributor') %}<form method="post" action="/indicator/{{ i.id }}/request" class="row" style="margin-top:8px">{{ csrf_field() }}<input type="text" name="request" placeholder="New evidence request" required style="width:360px"><input type="text" name="owner" placeholder="Owner office" style="width:180px"><button class="ghost sm">Add request</button></form>{% endif %}
+  </div>
+</div>
+
+<div>
+  <div class="card">
+    <h3 style="margin-top:0">AI preliminary assessment</h3>
+    <div class="row"><span style="font-size:34px;font-weight:700">{{ x.prelim }}</span><div>{{ badge(x.status) }} {{ badge(x.strength) }}<div class="small muted">Has {{ x.achieved or 'nothing verified' }} · needs {{ x.required }}</div></div></div>
+    <p class="small">{{ x.prelim_rationale }}</p>
+    <div class="note small">Advisory only. This is not the official FAU score.</div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Skeptical reviewer (VERIFY)</h3>
+    {% if x.flags %}<ul class="flags" style="padding-left:16px;margin:0">{% for f in x.flags %}<li class="small">{{ badge(f.severity) }} <strong>{{ f.question }}</strong> {{ f.message }}</li>{% endfor %}</ul>
+    {% else %}<p class="small muted">No automatic challenges. A human should still confirm currency and adoption.</p>{% endif %}
+  </div>
+  <div class="card" id="review">
+    <h3 style="margin-top:0">Human reviewer decision</h3>
+    <dl class="kv small"><dt>Review status</dt><dd>{{ badge(x.review_status) }}</dd>
+      <dt>Human preliminary</dt><dd>{{ pill(x.human_prelim) }}</dd><dt>Official score</dt><dd>{{ pill(x.official, off=True) }}</dd>
+      {% if x.review.reviewer %}<dt>Reviewer</dt><dd>{{ x.review.reviewer }} · {{ x.review.updated_at }}</dd>{% endif %}
+      {% if x.review.notes %}<dt>Notes</dt><dd>{{ x.review.notes }}</dd>{% endif %}</dl>
+    {% if can('reviewer') %}
+    <form method="post" action="/indicator/{{ i.id }}/review" style="margin-top:10px">{{ csrf_field() }}
+      <p><label class="small">Review status<br><select name="review_status">{% for v in ['NOT REVIEWED','IN REVIEW','NEEDS DECISION','APPROVED'] %}<option {{ 'selected' if x.review_status==v }}>{{ v }}</option>{% endfor %}</select></label></p>
+      <p><label class="small">Change preliminary assessment<br><select name="human_prelim_score"><option value="">(keep AI: {{ x.prelim }})</option>{% for n in range(4) %}<option value="{{ n }}" {{ 'selected' if x.human_prelim==n }}>{{ n }} – {{ RUBRIC[n][1] }}</option>{% endfor %}</select></label></p>
+      <p><label class="small">Official OLC score (human decision)<br><select name="official_score"><option value="">Not scored</option>{% for n in range(4) %}<option value="{{ n }}" {{ 'selected' if x.official==n }}>{{ n }} – {{ RUBRIC[n][1] }}</option>{% endfor %}</select></label></p>
+      <p><textarea name="notes" placeholder="Reviewer notes / rationale">{{ x.review.notes or '' }}</textarea></p>
+      <button>Save decision</button></form>
+    {% else %}<p class="small muted">Reviewer role required to record decisions.</p>{% endif %}
+    <p class="small" style="margin-top:10px"><a href="/submission/{{ i.id }}">Submission draft (approved evidence only) ›</a></p>
+  </div>
+  {% if can('admin') %}
+  <div class="card"><details><summary><strong>Admin: edit indicator wording</strong></summary>
+    <form method="post" action="/admin/indicator/{{ i.id }}" style="margin-top:8px">{{ csrf_field() }}
+      <p><textarea name="text" placeholder="Official QSS wording">{{ i.text or '' }}</textarea></p>
+      <p><input type="text" name="text_source" placeholder="Source (e.g., QSS PDF p. 4)" style="width:100%"></p>
+      <p><textarea name="alt_text" placeholder="Alternate wording (optional)">{{ i.alt_text or '' }}</textarea></p>
+      <p><textarea name="handbook_text" placeholder="Handbook interpretation">{{ i.handbook_text or '' }}</textarea></p>
+      <p><input type="text" name="handbook_source" placeholder="Handbook source / page" style="width:100%"></p>
+      <button class="sm">Save wording</button></form></details></div>{% endif %}
+  <div class="card"><h3 style="margin-top:0">History</h3>
+    {% for h in hist %}<div class="small"><span class="muted">{{ h.at }}</span> {{ h.actor }} · {{ h.action }}</div>{% else %}<div class="small muted">No human actions yet.</div>{% endfor %}</div>
+</div>
+</div>
+{% endblock %}

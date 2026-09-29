@@ -1,0 +1,36 @@
+{% extends "base.html" %}{% from "_macros.html" import badge, lvl, csrf_field with context %}
+{% block title %}{{ d.title }} · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<div class="small muted"><a href="/sources">Sources</a> › #{{ d.id }}</div>
+<h1>{{ d.title }}</h1>
+<div class="two"><div>
+<div class="card"><h2 style="margin-top:0">Evidence mapped from this source ({{ ev|length }})</h2>
+<table><tr><th>ID</th><th>Indicator</th><th>Location</th><th>Status</th><th>Strength</th><th>Level</th></tr>
+{% for e in ev|sort(attribute='indicator_id') %}<tr><td class="mono"><a href="/indicator/{{ e.indicator_id }}#{{ e.evidence_code }}">{{ e.evidence_code }}</a></td><td class="mono">{{ e.indicator_id }}</td><td class="small">{{ e.page or '' }} {{ e.section[:50] if e.section }}</td><td>{{ badge(display_status(e)) }}</td><td>{{ badge(e.strength) }}</td><td>{{ lvl(e.implementation_level) }}</td></tr>{% else %}<tr><td colspan="6" class="muted">No passages met the mapping threshold.</td></tr>{% endfor %}</table></div>
+<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Extracted passages ({{ passages|length }})</h2><a class="small" href="{{ '?' if show_all else '?all=1' }}">{{ 'show mapped only' if show_all else 'show all passages' }}</a></div>
+<div class="passlist">{% for p in passages %}{% set m = mapped.get(p.id) %}{% if show_all or m %}
+<div class="p {{ 'm' if m }}"><span class="mono muted">{% if p.page %}{{ 'p.' ~ p.page if p.page|string|int(-1) > 0 else p.page }}{% endif %} {% if p.section %}§{{ p.section[:50] }}{% endif %}</span> {{ p.text }}
+{% if m %}<div class="small">→ {% for e in m %}<a href="/indicator/{{ e.indicator_id }}#{{ e.evidence_code }}">{{ e.indicator_id }}</a> {% endfor %}</div>{% endif %}</div>{% endif %}{% endfor %}</div></div>
+</div><div>
+<div class="card"><h3 style="margin-top:0">Provenance</h3><dl class="kv small">
+<dt>Type</dt><dd>{{ d.doc_type }} ({{ d.kind }})</dd><dt>Authority</dt><dd>{{ d.authority }}</dd><dt>Organization</dt><dd>{{ d.source_org or '—' }}</dd>
+<dt>URL</dt><dd>{% if d.source_url %}<a href="{{ d.source_url }}" target="_blank" rel="noopener">{{ d.source_url }}</a>{% else %}—{% endif %}</dd>
+<dt>File</dt><dd>{% if d.stored_path %}<a href="/source/{{ d.id }}/file">{{ d.filename }}</a>{% else %}{{ d.filename or '—' }}{% endif %}</dd>
+<dt>Date</dt><dd>{{ d.doc_date or 'undated' }}</dd><dt>Version</dt><dd>{% if d.is_draft %}{{ badge('PROPOSED/DRAFT') }} {{ d.version_note }}{% elif d.superseded_by %}Superseded by <a href="/source/{{ d.superseded_by }}">#{{ d.superseded_by }}</a>{% else %}current{% endif %}</dd>
+<dt>Classification</dt><dd>{{ badge(d.classification) }}</dd><dt>Pages / chars</dt><dd>{{ d.page_count or '—' }} / {{ d.char_count or '—' }}</dd>
+<dt>SHA-256</dt><dd class="mono">{{ (d.sha256 or '')[:16] }}…</dd><dt>Added</dt><dd>{{ d.added_by }} · {{ d.added_at }}</dd><dt>Processed</dt><dd>{{ d.processed_at or '—' }}</dd>
+<dt>Notes</dt><dd>{{ d.notes or '—' }}</dd></dl></div>
+{% if can('contributor') and d.origin != 'matrix' %}
+<div class="card"><h3 style="margin-top:0">Correct metadata</h3>
+<form method="post" action="/source/{{ d.id }}/update">{{ csrf_field() }}<input type="hidden" name="act" value="meta">
+<p><input type="text" name="title" value="{{ d.title }}" style="width:100%"></p>
+<div class="row"><select name="doc_type">{% for t in ['PLAN','POLICY','REPORT','DATA','MINUTES','STANDARD','WEBPAGE','OTHER'] %}<option {{ 'selected' if d.doc_type==t }}>{{ t }}</option>{% endfor %}</select>
+<select name="authority">{% for t in ['FAU','STATE','ACCREDITOR','OTHER','UNKNOWN'] %}<option {{ 'selected' if d.authority==t }}>{{ t }}</option>{% endfor %}</select>
+<select name="classification">{% for t in ['PUBLIC','INTERNAL','RESTRICTED'] %}<option {{ 'selected' if d.classification==t }}>{{ t }}</option>{% endfor %}</select></div>
+<p><input type="text" name="doc_date" value="{{ d.doc_date or '' }}" placeholder="Document date"> <input type="text" name="source_org" value="{{ d.source_org or '' }}" placeholder="Organization"></p>
+<p><label class="small"><input type="checkbox" name="is_draft" {{ 'checked' if d.is_draft }}> Proposed / draft</label> <input type="text" name="version_note" value="{{ d.version_note or '' }}" placeholder="Version note" style="width:60%"></p>
+<p><input type="text" name="notes" value="{{ d.notes or '' }}" placeholder="Notes (e.g., confirmed adopted by Provost on ...)" style="width:100%"></p>
+<p><label class="small"><input type="checkbox" name="reprocess" checked> Recalculate unreviewed mappings</label></p>
+<button class="sm">Save</button></form>
+<form method="post" action="/source/{{ d.id }}/update" style="margin-top:8px">{{ csrf_field() }}<input type="hidden" name="act" value="reprocess"><button class="ghost sm">Reprocess against all indicators</button></form></div>{% endif %}
+</div></div>{% endblock %}

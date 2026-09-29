@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% from "_macros.html" import badge, csrf_field with context %}
+{% block title %}Admin · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<h1>Administration</h1>
+<div class="two"><div>
+<div class="card"><h2 style="margin-top:0">Users and access</h2>
+<p class="small muted">Roles: <b>viewer</b> (read) · <b>contributor</b> (add sources, request evidence) · <b>reviewer</b> (approve/reject, scores) · <b>admin</b>. Clearance controls which classifications a user can see: PUBLIC ⊂ INTERNAL ⊂ RESTRICTED.</p>
+<table><tr><th>User</th><th>Role</th><th>Clearance</th><th>Active</th><th>Reset password</th><th></th></tr>
+{% for u in users %}<tr><form method="post" action="/admin/users">{{ csrf_field() }}<input type="hidden" name="act" value="update"><input type="hidden" name="uid" value="{{ u.id }}">
+<td><strong>{{ u.display_name }}</strong><div class="small muted">{{ u.username }}</div></td>
+<td><select name="role">{% for r in ['viewer','contributor','reviewer','admin'] %}<option {{ 'selected' if u.role==r }}>{{ r }}</option>{% endfor %}</select></td>
+<td><select name="clearance">{% for c in ['PUBLIC','INTERNAL','RESTRICTED'] %}<option {{ 'selected' if u.clearance==c }}>{{ c }}</option>{% endfor %}</select></td>
+<td><input type="checkbox" name="active" {{ 'checked' if u.active }}></td><td><input type="password" name="password" placeholder="new password" style="width:130px"></td><td><button class="ghost sm">Save</button></td></form></tr>{% endfor %}</table>
+<form method="post" action="/admin/users" class="row" style="margin-top:10px">{{ csrf_field() }}<input type="hidden" name="act" value="create">
+<input type="text" name="username" placeholder="username (e.g., FAU NetID)" required><input type="text" name="display_name" placeholder="Display name">
+<select name="role"><option>viewer</option><option>contributor</option><option selected>reviewer</option><option>admin</option></select>
+<select name="clearance"><option>PUBLIC</option><option selected>INTERNAL</option><option>RESTRICTED</option></select>
+<input type="password" name="password" placeholder="initial password (10+)" required><button class="sm">Add user</button></form></div>
+
+<div class="card" id="rubric"><h2 style="margin-top:0">OLC Rubric (governing materials)</h2>
+{% set pend = inds|selectattr('pending')|list %}
+<p>{{ inds|length }} indicator slots · {{ inds|length - pend|length }} with wording · {{ pend|length }} pending · {{ n_qss }} verified against the QSS PDF · {{ inds|selectattr('handbook_text')|list|length }} with Handbook interpretation.</p>
+{% if pend %}<div class="note small">Pending: {% for i in pend %}<a href="/indicator/{{ i.id }}">{{ i.id }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+<form method="post" action="/admin/rubric" enctype="multipart/form-data" class="row" style="margin-top:10px">{{ csrf_field() }}<input type="hidden" name="kind" value="qss">
+<label class="small">QSS - Administration of Online Programs.pdf<br><input type="file" name="pdf" accept=".pdf" required></label><button class="sm">Parse and preview</button></form>
+<form method="post" action="/admin/rubric" enctype="multipart/form-data" class="row" style="margin-top:10px">{{ csrf_field() }}<input type="hidden" name="kind" value="handbook">
+<label class="small">Administration of Online Programs Handbook.pdf<br><input type="file" name="pdf" accept=".pdf" required></label><button class="sm">Parse and preview</button></form>
+<p class="small muted">Nothing changes until you confirm the preview. You can also edit any indicator's wording on its page.</p></div>
+
+<div class="card"><h2 style="margin-top:0">Audit log</h2><div class="tablewrap" style="max-height:420px;overflow:auto"><table>
+{% for l in log %}<tr><td class="small muted" style="white-space:nowrap">{{ l.at }}</td><td class="small">{{ l.actor }}</td><td class="small">{{ l.action }}</td><td class="small mono">{{ l.target or '' }}</td><td class="small">{{ (l.detail or '')[:160] }}</td></tr>{% endfor %}</table></div></div>
+</div><div>
+<div class="card"><h3 style="margin-top:0">Checkpoints (for WHAT CHANGED)</h3>
+<form method="post" action="/admin/checkpoint" class="row">{{ csrf_field() }}<input type="text" name="label" placeholder="Label, e.g. Oct team meeting"><button class="sm">Save checkpoint</button></form>
+{% for r in runs %}<div class="small" style="margin-top:4px">{{ r.created_at }} · {{ r.label }} <span class="muted">({{ r.created_by }})</span></div>{% endfor %}</div>
+<div class="card"><h3 style="margin-top:0">Approved web sources</h3><p class="small">{{ c.allowed_web_domains|join(', ') }}</p>
+<h3>Seed pages for SEARCH</h3><ul class="small" style="padding-left:16px">{% for s in c.fau_seed_pages %}<li>{{ s }}</li>{% endfor %}</ul>
+<p class="small muted">Edit config/approved_sources.json to change. The agent never fetches outside these domains.</p></div>
+<div class="card"><h3 style="margin-top:0">Integrations</h3>{% for x in conns %}<p class="small"><strong>{{ x.name }}</strong><br>{{ x.status() }}</p>{% endfor %}
+<p class="small"><strong>Claude review layer</strong><br>{{ 'On' if llm_on else 'Off: install the anthropic package and set ANTHROPIC_API_KEY to enable a second-opinion pass that can only drop mappings or lower levels.' }}</p></div>
+</div></div>{% endblock %}

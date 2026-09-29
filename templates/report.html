@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block body %}
+<div class="row" style="justify-content:space-between"><div></div>
+<div class="row"><a class="btn ghost sm" href="?download=1">Download .md</a> <a class="btn ghost sm" href="/export.xlsx">Export repository (.xlsx)</a></div></div>
+<div class="card report">{{ text|md }}</div>{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% from "_macros.html" import csrf_field with context %}
+{% block body %}
+<div class="small muted"><a href="/indicator/{{ ind.id }}">{{ ind.id }}</a> › Search FAU</div>
+<h1>Search approved FAU sources: {{ ind.id }}</h1>
+<p class="muted">Crawled {{ n }} pages on approved domains (bounded, read-only). Candidates are ranked by relevance to "{{ (ind.text or '')[:120] }}…". Relevance is not substantiation: process a candidate to extract and grade its passages.</p>
+<div class="card"><table><tr><th>Candidate page</th><th>Score</th><th>Best matching text</th><th></th></tr>
+{% for r in results %}<tr><td><a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a><div class="small muted">{{ r.url }}</div></td><td>{{ r.score }}</td><td class="small">{{ r.snippet }}</td>
+<td>{% if r.already_ingested %}<span class="small muted">already ingested</span>{% else %}<form method="post" action="/sources/add">{{ csrf_field() }}<input type="hidden" name="mode" value="url"><input type="hidden" name="url" value="{{ r.url }}"><input type="hidden" name="classification" value="PUBLIC"><button class="sm">Process</button></form>{% endif %}</td></tr>
+{% else %}<tr><td colspan="4" class="muted">No relevant candidates found on the approved seed pages. Try uploading internal documents, or add seed pages in config/approved_sources.json.</td></tr>{% endfor %}</table></div>{% endblock %}

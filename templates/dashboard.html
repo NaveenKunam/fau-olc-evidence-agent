@@ -1,0 +1,70 @@
+{% extends "base.html" %}{% from "_macros.html" import badge, lvl, pill, csrf_field with context %}
+{% block title %}Dashboard · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<div class="row" style="justify-content:space-between;align-items:flex-end">
+  <div><h1 style="margin-bottom:2px">OLC Readiness Dashboard</h1>
+  <div class="muted small">OLC Quality Scorecard · Administration of Online Programs · Florida Atlantic University Online</div></div>
+  <div class="row">
+    <a class="btn ghost sm" href="/reports/initial">Initial review</a>
+    <a class="btn ghost sm" href="/reports/verify">Run VERIFY</a>
+    <a class="btn ghost sm" href="/export.xlsx">Export .xlsx</a>
+    {% if can('contributor') %}<a class="btn sm" href="/sources/add">+ Add source</a>{% endif %}
+  </div>
+</div>
+
+<div class="grid kpis" style="margin:14px 0">
+  <div class="kpi"><div class="v">{{ s.total }}</div><div class="l">Indicators loaded{% if s.wording_pending %} ({{ s.wording_pending }} wording pending){% endif %}</div></div>
+  <div class="kpi s"><div class="v">{{ s.strong }}</div><div class="l">Strong evidence</div></div>
+  <div class="kpi p"><div class="v">{{ s.partial }}</div><div class="l">Partial evidence</div></div>
+  <div class="kpi m"><div class="v">{{ s.missing }}</div><div class="l">Missing evidence</div></div>
+  <div class="kpi vv"><div class="v">{{ s.needs_verification }}</div><div class="l">Needs verification only</div></div>
+  <div class="kpi"><div class="v">{{ s.reviewed }}<span class="muted" style="font-size:15px"> / {{ s.approved }}</span></div><div class="l">Human-reviewed / approved</div></div>
+  <div class="kpi"><div class="v">{{ s.prelim_points }}<span class="muted" style="font-size:15px"> / {{ s.max_points }}</span></div><div class="l">Preliminary points (AI, advisory)</div></div>
+  <div class="kpi"><div class="v">{{ s.official_points if s.official_points is not none else '—' }}</div><div class="l">Official points ({{ s.official_count }} scored by humans)</div></div>
+  <div class="kpi"><div class="v">{{ s.coverage_pct }}%</div><div class="l">Evidence coverage (not a score)</div></div>
+  <div class="kpi"><div class="v">{{ s.backlog }}</div><div class="l">Evidence items awaiting review</div></div>
+</div>
+
+<div class="note" style="margin-bottom:14px"><strong>Preliminary only.</strong> AI preliminary scores and evidence coverage are advisory aids for the FAU OLC team. They are not official FAU scores; only human reviewers enter official 0–3 scores. Coverage % counts indicators with any mapped item and is not an OLC score.</div>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">All 70 indicators by category</h2>
+  <div class="legend"><span><i class="h-STRONG"></i>Strong</span><span><i class="h-PARTIAL"></i>Partial</span><span><i class="h-NEEDS"></i>Needs verification</span><span><i class="h-MISSING"></i>Missing</span><span><i class="h-WORDING"></i>Wording pending</span></div></div>
+  {% for c in cats %}
+  <div class="catrow"><div><strong>{{ c.name }}</strong><div class="small muted">{{ c.inds|selectattr('status','equalto','STRONG')|list|length }} strong · {{ c.inds|selectattr('status','equalto','PARTIAL')|list|length }} partial · {{ c.inds|selectattr('n_valid','equalto',0)|list|length }} none</div></div>
+    <div class="heat">{% for x in c.inds %}<a class="h-{{ x.status.split(' ')[0] }}" href="/indicator/{{ x.indicator.id }}" title="{{ x.indicator.text or 'Wording pending' }} — {{ x.status }}, prelim {{ x.prelim }}">{{ x.indicator.id }}<br><span style="font-weight:500">{{ x.prelim }}{% if x.official is not none %} · <b>{{ x.official }}</b>{% endif %}</span></a>{% endfor %}</div></div>
+  {% endfor %}
+  <div class="small muted" style="margin-top:6px">Tile number = AI preliminary score (advisory); bold number after the dot = official human score.</div>
+</div>
+
+<div class="card">
+<form class="filters" method="get">
+  <select name="category"><option value="">All categories</option>{% for c in cats %}<option value="{{ c.code }}" {{ 'selected' if f.category==c.code }}>{{ c.name }}</option>{% endfor %}</select>
+  <select name="status"><option value="">Any status</option>{% for v in ['STRONG','PARTIAL','NEEDS VERIFICATION','MISSING','WORDING PENDING'] %}<option {{ 'selected' if f.status==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="strength"><option value="">Any strength</option>{% for v in ['STRONG','MODERATE','WEAK','NONE'] %}<option {{ 'selected' if f.strength==v }}>{{ v }}</option>{% endfor %}</select>
+  <select name="owner"><option value="">Any owner</option>{% for o in owners %}<option {{ 'selected' if f.owner==o }}>{{ o }}</option>{% endfor %}</select>
+  <select name="review"><option value="">Any review status</option>{% for v in ['NOT REVIEWED','IN REVIEW','NEEDS DECISION','APPROVED'] %}<option {{ 'selected' if f.review==v }}>{{ v }}</option>{% endfor %}</select>
+  <input type="text" name="q" value="{{ f.q }}" placeholder="Indicator ID or text">
+  <button>Filter</button> <a href="/" class="small">clear</a>
+  <span class="muted small" style="margin-left:auto">{{ rows|length }} shown</span>
+</form>
+<div class="tablewrap"><table>
+<tr><th>ID</th><th>OLC requirement</th><th>Status</th><th>Strength</th><th>Has → Needs</th><th title="AI preliminary (advisory)">AI prelim</th><th>Official</th><th>Review</th><th>Items</th><th>Likely owner</th></tr>
+{% set ns = namespace(cat=None) %}
+{% for x in rows %}{% set i = x.indicator %}
+{% if i.category != ns.cat %}{% set ns.cat = i.category %}<tr><td colspan="10" class="cat">{{ i.category }}</td></tr>{% endif %}
+<tr>
+  <td class="mono"><a href="/indicator/{{ i.id }}"><strong>{{ i.id }}</strong></a></td>
+  <td style="max-width:430px">{% if i.text %}{{ i.text }}{% else %}<span class="muted">Wording pending — import QSS PDF</span>{% endif %}
+      {% if x.flags|selectattr('severity','equalto','HIGH')|list %}<div class="small" style="color:var(--missing)">⚑ {{ (x.flags|selectattr('severity','equalto','HIGH')|first).message[:120] }}</div>{% endif %}</td>
+  <td>{{ badge(x.status) }}</td>
+  <td>{{ badge(x.strength) }}</td>
+  <td class="small">{{ lvl(x.achieved) }}<br>→ {{ lvl(x.required) }}</td>
+  <td>{{ pill(x.prelim) }}</td>
+  <td>{{ pill(x.official, off=True) }}</td>
+  <td>{{ badge(x.review_status) }}</td>
+  <td class="small">{{ x.n_valid }}{% if x.n_review_backlog %}<br><span class="muted">{{ x.n_review_backlog }} to review</span>{% endif %}</td>
+  <td class="small">{{ x.owners[:2]|join('; ') }}</td>
+</tr>{% endfor %}
+</table></div></div>
+{% endblock %}

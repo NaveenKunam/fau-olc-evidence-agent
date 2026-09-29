@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Owner packets · FAU OLC Evidence Agent{% endblock %}
+{% block body %}
+<h1>Evidence requests by likely FAU owner</h1>
+<div class="two"><div>{% if packet %}<div class="card report"><p><a class="btn ghost sm" href="?owner={{ key|urlencode }}&download=1">Download packet (.md)</a></p>{{ packet|md }}</div>
+{% else %}<div class="card"><p class="muted">Choose an owner to generate a consolidated evidence request packet (same as the OWNER PACKET command).</p></div>{% endif %}</div>
+<div><div class="card"><h3 style="margin-top:0">Owners with open requests</h3>
+<table class="md">{% for o, xs in ow %}<tr><td><a href="?owner={{ o|urlencode }}">{{ o }}</a></td><td class="small">{{ xs|length }}</td></tr>{% endfor %}</table>
+<p class="small muted">Shortcuts: <a href="?owner=OIT">OIT</a> · <a href="?owner=PROVOST">Provost</a> · <a href="?owner=COCE">COCE</a> · <a href="?owner=IE">Institutional Effectiveness</a></p></div></div></div>
+{% endblock %}
